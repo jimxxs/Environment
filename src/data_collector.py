@@ -101,11 +101,49 @@ class SensorDataCollector:
             conn.close()
             
             self.logger.info(f"Data saved: T={temperature:.1f}°C, H={humidity:.1f}%, B={battery:.2f}V")
+            #send to thingspeak
+            self.send_to_thingspeak(temperature, humidity, battery, motion)
             return True
             
         except Exception as e:
             self.logger.error(f"Database error: {e}")
             return False
+        
+    def send_to_thingspeak(self, temperature: float, humidity: float, 
+                       battery: float, motion: int):
+        """Send data to ThingSpeak"""
+        self.logger.info(f"ThingSpeak enabled: {self.config.THINGSPEAK_ENABLED}")  # Debug
+        
+        if not self.config.THINGSPEAK_ENABLED:
+            self.logger.warning("ThingSpeak is disabled in config")
+            return
+            
+        try:
+            url = "https://api.thingspeak.com/update"
+            data = {
+                'api_key': self.config.THINGSPEAK_WRITE_API_KEY,
+                'field1': temperature,
+                'field2': humidity,
+                'field3': battery,
+                'field4': motion,
+            }
+            
+            self.logger.info(f"Attempting to send to ThingSpeak: {data}")  # Debug
+            
+            response = requests.post(url, data=data, timeout=10)
+            
+            self.logger.info(f"ThingSpeak response: {response.status_code} - {response.text}")  # Debug
+            
+            if response.status_code == 200 and response.text.strip() != "0":
+                self.logger.info(f"✓ Sent to ThingSpeak (Entry ID: {response.text.strip()})")
+            else:
+                self.logger.warning(f"✗ ThingSpeak rejected data: {response.text}")
+                
+        except Exception as e:
+            self.logger.error(f"Error sending to ThingSpeak: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())  # Full error details
+            
             
     def check_alerts(self, temperature: float, humidity: float, battery: float):
         """Check for alert conditions"""
@@ -320,3 +358,5 @@ class SensorDataCollector:
 if __name__ == "__main__":
     collector = SensorDataCollector()
     collector.run()
+    
+   

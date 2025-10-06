@@ -37,6 +37,7 @@ class Config:
     HUMIDITY_MAX = 80.0     # Percentage
     BATTERY_LOW = 3.0       # Volts
     
+    
     @classmethod
     def get_mqtt_topic(cls):
         return f"v3/{cls.TTN_USERNAME}/devices/{cls.TTN_DEVICE_ID}/up"
@@ -44,3 +45,8 @@ class Config:
     @classmethod
     def get_api_url(cls):
         return f"https://{cls.TTN_BROKER}/api/v3/as/applications/{cls.TTN_APP_ID}/devices/{cls.TTN_DEVICE_ID}/packages/storage/uplink_message"
+    
+     #Thingspeak configuration
+    THINGSPEAK_ENABLED = True
+    THINGSPEAK_WRITE_API_KEY = 'JWXTN9WTA90150Z3'
+    THINGSPEAK_CHANNEL_ID = '3101089'
