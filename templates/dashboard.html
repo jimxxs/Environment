@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environmental Monitoring Dashboard</title>
+    
+    <!-- Load Moment.js first -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    
+    <!-- Load Chart.js second -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    
+    <!-- Load Chart.js adapter last -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
+    
+    <!-- 4. Chart.js Plugin for Auto Resizing -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .status-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin: 10px;
+        }
+
+        .status-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .temperature { background: linear-gradient(45deg, #ff6b6b, #ff8e8e); }
+        .humidity { background: linear-gradient(45deg, #4ecdc4, #6edbdb); }
+        .battery { background: linear-gradient(45deg, #45b7d1, #68c5db); }
+        .motion { background: linear-gradient(45deg, #96ceb4, #a8d8c3); }
+
+        .status-info h3 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .status-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+
+        .card h2 i {
+            margin-right: 10px;
+            color: #667eea;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(45deg, #f8f9ff, #e8eeff);
+            border-radius: 10px;
+        }
+
+        .stat-item .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-item .label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .alerts-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            background: #f8f9fa;
+        }
+
+        .alert-warning { border-left-color: #ffc107; }
+        .alert-danger { border-left-color: #dc3545; }
+        .alert-info { border-left-color: #17a2b8; }
+
+        .alert-time {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .controls {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .time-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .time-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: transparent;
+            color: #667eea;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .time-btn.active,
+        .time-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .refresh-btn {
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .status-bar {
+                flex-direction: column;
+            }
+            
+            .status-item {
+                margin: 5px 0;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-leaf"></i> Environmental Monitoring Dashboard</h1>
+            <p>Real-time LoRaWAN Sensor Data Visualization</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-icon temperature">
+                    <i class="fas fa-thermometer-half"></i>
+                </div>
+                <div class="status-info">
+                    <h3 id="temp-value">--°C</h3>
+                    <p>Temperature</p>
+                </div>
+            </div>
+            
+            <div class="status-item">
+                <div class="status-icon humidity">
+                    <i class="fas fa-tint"></i>
+                </div>
+                <div class="status-info">
+                    <h3 id="humidity-value">--%</h3>
+                    <p>Humidity</p>
+                </div>
+            </div>
+            
+            <div class="status-item">
+                <div class="status-icon battery">
+                    <i class="fas fa-battery-three-quarters"></i>
+                </div>
+                <div class="status-info">
+                    <h3 id="battery-value">--V</h3>
+                    <p>Battery</p>
+                </div>
+            </div>
+            
+            <div class="status-item">
+                <div class="status-icon motion">
+                    <i class="fas fa-walking"></i>
+                </div>
+                <div class="status-info">
+                    <h3 id="motion-value">--</h3>
+                    <p>Motion Count</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="time-selector">
+                <span><strong>Time Range:</strong></span>
+                <button class="time-btn active" data-hours="1">1H</button>
+                <button class="time-btn" data-hours="6">6H</button>
+                <button class="time-btn" data-hours="24">24H</button>
+                <button class="time-btn" data-hours="72">3D</button>
+            </div>
+            
+            <button class="refresh-btn" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i>
+                Refresh Data
+            </button>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2><i class="fas fa-temperature-high"></i> Temperature</h2>
+                <div class="chart-container">
+                    <canvas id="temperature-chart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2><i class="fas fa-tint"></i> Humidity</h2>
+                <div class="chart-container">
+                    <canvas id="humidity-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2><i class="fas fa-battery-three-quarters"></i> Battery Level</h2>
+                <div class="chart-container">
+                    <canvas id="battery-chart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2><i class="fas fa-walking"></i> Motion Activity</h2>
+                <div class="chart-container">
+                    <canvas id="motion-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2><i class="fas fa-chart-pie"></i> Statistics (Last 7 Days)</h2>
+                <div id="stats-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading statistics...
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-exclamation-triangle"></i> Recent Alerts</h2>
+                <div id="alerts-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading alerts...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let charts = {};
+        let currentHours = 1;
+
+        // Initialize charts
+        function initCharts() {
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'hour',
+                            parser: 'YYYY-MM-DDTHH:mm:ss.SSSSSSZ',
+                            tooltipFormat: 'll HH:mm'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            };
+
+            // Initialize temperature chart
+            const tempCtx = document.getElementById('temperature-chart');
+            if (tempCtx) {
+                charts.temperature = new Chart(tempCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Temperature (°C)',
+                            borderColor: '#ff6b6b',
+                            backgroundColor: '#ff6b6b33',
+                            fill: true,
+                            tension: 0.4,
+                            data: []
+                        }]
+                    },
+                    options: commonOptions
+                });
+            }
+
+            // Initialize humidity chart
+            const humidityCtx = document.getElementById('humidity-chart');
+            if (humidityCtx) {
+                charts.humidity = new Chart(humidityCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Humidity (%)',
+                            borderColor: '#4ecdc4',
+                            backgroundColor: '#4ecdc433',
+                            fill: true,
+                            tension: 0.4,
+                            data: []
+                        }]
+                    },
+                    options: commonOptions
+                });
+            }
+
+            // Initialize battery chart
+            const batteryCtx = document.getElementById('battery-chart');
+            if (batteryCtx) {
+                charts.battery = new Chart(batteryCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Battery Level (V)',
+                            borderColor: '#45b7d1',
+                            backgroundColor: '#45b7d133',
+                            fill: true,
+                            tension: 0.4,
+                            data: []
+                        }]
+                    },
+                    options: commonOptions
+                });
+            }
+
+            // Initialize motion chart
+            const motionCtx = document.getElementById('motion-chart');
+            if (motionCtx) {
+                charts.motion = new Chart(motionCtx, {
+                    type: 'bar',
+                    data: {
+                        datasets: [{
+                            label: 'Motion Events',
+                            backgroundColor: '#96ceb4',
+                            data: []
+                        }]
+                    },
+                    options: commonOptions
+                });
+            }
+        }
+
+
+        // Log chart data for debugging
+        function logChartData(data) {
+    console.log('Received data points:', data.length);
+    console.log('Sample data point:', data[0]);
+}
+        // Update charts with new data
+        function updateCharts(data) {
+            if (!data || !Array.isArray(data)) {
+                console.error('Invalid data format received:', data);
+                return;
+            }
+
+            try {
+                // Format data for each chart
+                const formattedData = {
+                    temperature: data.map(item => ({
+                        x: new Date(item.timestamp),
+                        y: Number(item.temperature) || 0
+                    })),
+                    humidity: data.map(item => ({
+                        x: new Date(item.timestamp),
+                        y: Number(item.humidity) || 0
+                    })),
+                    battery: data.map(item => ({
+                        x: new Date(item.timestamp),
+                        y: Number(item.battery) || 0
+                    })),
+                    motion: data.map(item => ({
+                        x: new Date(item.timestamp),
+                        y: Number(item.motion) || 0
+                    }))
+                };
+
+                // Update each chart if it exists
+                Object.keys(charts).forEach(chartType => {
+                    if (charts[chartType] && formattedData[chartType]) {
+                        charts[chartType].data.datasets[0].data = formattedData[chartType];
+                        charts[chartType].update('none'); // Use 'none' for better performance
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error updating charts:', error);
+            }
+        }
+
+        // Update status display
+        function updateStatus(data) {
+            if (data) {
+                document.getElementById('temp-value').textContent = `${data.temperature?.toFixed(1) || '--'}°C`;
+                document.getElementById('humidity-value').textContent = `${data.humidity?.toFixed(1) || '--'}%`;
+                document.getElementById('battery-value').textContent = `${data.battery?.toFixed(2) || '--'}V`;
+                document.getElementById('motion-value').textContent = data.motion?.toString() || '--';
+            }
+        }
+
+        // Update statistics
+        function updateStats(data) {
+            const statsContent = document.getElementById('stats-content');
+            
+            if (data) {
+                statsContent.innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="value">${data.total_readings}</div>
+                            <div class="label">Total Readings</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="value">${data.temperature.min}°C</div>
+                            <div class="label">Min Temp</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="value">${data.temperature.max}°C</div>
+                            <div class="label">Max Temp</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="value">${data.temperature.avg}°C</div>
+                            <div class="label">Avg Temp</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="value">${data.humidity.min}%</div>
+                            <div class="label">Min Humidity</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="value">${data.humidity.max}%</div>
+                            <div class="label">Max Humidity</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                statsContent.innerHTML = '<p>No statistics available</p>';
+            }
+        }
+
+        // Update alerts
+        function updateAlerts(data) {
+            const alertsContent = document.getElementById('alerts-content');
+            
+            if (data && data.length > 0) {
+                alertsContent.innerHTML = `
+                    <div class="alerts-container">
+                        ${data.map(alert => `
+                            <div class="alert-item alert-${getAlertType(alert.type)}">
+                                <div class="alert-time">${new Date(alert.timestamp).toLocaleString()}</div>
+                                <div>${alert.message}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                alertsContent.innerHTML = '<p>No recent alerts</p>';
+            }
+        }
+
+        function getAlertType(type) {
+            if (type.includes('LOW') || type.includes('HIGH')) return 'warning';
+            if (type.includes('BATTERY')) return 'danger';
+            return 'info';
+        }
+
+        // Fetch data functions
+        async function fetchLatestData() {
+            try {
+                const response = await fetch('/api/latest');
+                const data = await response.json();
+                updateStatus(data);
+            } catch (error) {
+                console.error('Error fetching latest data:', error);
+            }
+        }
+
+        
+// Add this function before fetchHistoricalData
+function showNoDataMessage() {
+    document.querySelectorAll('.chart-container').forEach(container => {
+        const canvas = container.querySelector('canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#666';
+            ctx.fillText('No data available for selected time range', canvas.width/2, canvas.height/2);
+        }
+    });
+}
+
+// Update the fetchHistoricalData function
+async function fetchHistoricalData(hours = 24) {
+    try {
+        const response = await fetch(`/api/historical?hours=${hours}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('Raw API response:', data);
+        
+        if (data && Array.isArray(data) && data.length > 0) {
+            logChartData(data);
+            updateCharts(data);
+        } else {
+            console.warn('No historical data received or invalid format:', data);
+            showNoDataMessage();
+        }
+    } catch (error) {
+        console.error('Error fetching historical data:', error);
+        showNoDataMessage();
+    }
+}
+
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                updateStats(data);
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+
+        async function fetchAlerts() {
+            try {
+                const response = await fetch('/api/alerts');
+                const data = await response.json();
+                updateAlerts(data);
+            } catch (error) {
+                console.error('Error fetching alerts:', error);
+            }
+        }
+
+        // Refresh all data
+        function refreshData() {
+            fetchLatestData();
+            fetchHistoricalData(currentHours);
+            fetchStats();
+            fetchAlerts();
+        }
+
+        // Time range selector
+        document.querySelectorAll('.time-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentHours = parseInt(btn.dataset.hours);
+                fetchHistoricalData(currentHours);
+            });
+        });
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Initialize charts first
+        await initCharts();
+        
+        // Then fetch initial data
+        await refreshData();
+        
+        // Set up auto-refresh
+        setInterval(refreshData, 30000);
+        
+        // Set up time range buttons
+        document.querySelectorAll('.time-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentHours = parseInt(btn.dataset.hours);
+                fetchHistoricalData(currentHours);
+            });
+        });
+    } catch (error) {
+        console.error('Error initializing dashboard:', error);
+    }
+});
+    </script>
+</body>
+</html>
