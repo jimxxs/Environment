@@ -158,8 +158,8 @@ class EnhancedDataCollector:
                              battery: float, motion: int):
         """Process sensor data and send to cloud services"""
         
-        # Save to local database first (existing code)
-        # ... your existing database save code ...
+        # Save to local database first 
+        # self.save_to_database(temperature, humidity, battery, motion)
         
         # Send to cloud services if configured
         if self.cloud_manager:
@@ -182,14 +182,14 @@ class EnhancedDataCollector:
 CLOUD_CONFIG = {
     # ThingSpeak configuration
     'thingspeak': {
-        'enabled': True,  # Set to True when you have credentials
+        'enabled': True,  
         'write_api_key': 'JWXTN9WTA90150Z3',
         'channel_id': '3101089'
     },
     
     # AWS IoT configuration
     'aws_iot': {
-        'enabled': False,  # Set to True when you have certificates
+        'enabled': False,  
         'endpoint': 'YOUR_AWS_IOT_ENDPOINT',
         'cert_path': 'path/to/certificate.pem.crt',
         'key_path': 'path/to/private.pem.key',
@@ -199,7 +199,7 @@ CLOUD_CONFIG = {
     
     # Azure IoT configuration
     'azure_iot': {
-        'enabled': False,  # Set to True when you have connection string
+        'enabled': False,  
         'connection_string': 'YOUR_DEVICE_CONNECTION_STRING',
         'device_id': 'your-device-id'
     }
